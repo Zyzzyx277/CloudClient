@@ -6,17 +6,16 @@ namespace CloudClientConsole;
 
 public class Account
 {
-    public string PrivateKey { get; set; }
-    public string PublicKey { get; set; }
-    public byte[] AesKey { get; set; }
-    public string CloudIp { get; set; }
-    public string UserId { get; set; }
-
+    public string? PrivateKey { get; set; }
+    public string? PublicKey { get; set; }
+    public byte[]? AesKey { get; set; }
+    public string? CloudIp { get; set; }
+    public string? UserId { get; set; }
     public string AccId { get; set; }
 
     public static readonly HashSet<Account> Accounts = LoadAccounts();
 
-    private static void ShowAccounts()
+    public static void ShowAccounts()
     {
         Console.WriteLine("Accounts:\n\r-----------------------");
         foreach (var acc in Accounts)
@@ -27,8 +26,8 @@ public class Account
             Console.WriteLine("-----------------------");
         }
     }
-    
-    private static async Task AddAccount(List<string> args)
+
+    public static async Task AddAccount(List<string> args)
     {
         Account acc = new Account();
         
@@ -50,7 +49,7 @@ public class Account
                     break;
                 case "--aesKey":
                     i++;
-                    acc.AesKey = Convert.FromBase64String(args[i]);
+                    acc.AesKey = Encoding.UTF8.GetBytes(args[i]);
                     break;
                 case "--cloudIp":
                     i++;
@@ -81,49 +80,24 @@ public class Account
             return;
         }
 
-        if (acc.UserId is null) await CloudRequest.CreateUserInCloud(new List<string> {acc.CloudIp, acc.PublicKey, "-r"});
+        if (acc.UserId is null && acc.CloudIp is not null) await CloudRequest.CreateUserInCloud(acc.AccId, true);
         
         Accounts.Add(acc);
         Console.WriteLine("Account created");
         SaveAccounts();
     }
 
-    public static async Task AccCommands(List<string> args)
+    public static void GetProp(string accId, string prop)
     {
-        string command = args[0];
-        if(args.Count > 0) args.RemoveAt(0);
-        
-        switch (command.ToLower())
-        {
-            case "ls":
-                ShowAccounts();
-                break;
-            case "add":
-                await AddAccount(args);
-                break;
-            case "update":
-                UpdateAccount(args);
-                break;
-            case "get":
-                GetProp(args);
-                break;
-            default:
-                Console.WriteLine($"{command}: Command Not Found");
-                break;
-        }
-    }
-
-    public static void GetProp(List<string> args)
-    {
-        var acc = Accounts.FirstOrDefault(p => p.AccId == args[0]);
+        var acc = Accounts.FirstOrDefault(p => p.AccId == accId);
         if (acc is null)
         {
-            Console.WriteLine($"Account {args[0]} not existing");
+            Console.WriteLine("Account Not Found");
             return;
         }
 
         string output = string.Empty;
-        switch (args[1])
+        switch (prop)
         {
             case "privateKey":
                 output = acc.PrivateKey;
@@ -141,12 +115,11 @@ public class Account
                 output = acc.CloudIp;
                 break;
             default:
-                Console.WriteLine($"{args[1]}: Argument Not Found");
-                return;
+                Console.WriteLine($"{prop}: Argument Not Found");
                 return;
         }
 
-        Console.WriteLine($"{args[1]}: {output}");
+        Console.WriteLine($"{prop}: {output}");
     }
 
     public static void UpdateAccount(List<string> args)
@@ -154,44 +127,65 @@ public class Account
         var acc = Accounts.FirstOrDefault(p => p.AccId == args[0]);
         if (acc is null) return;
 
-        switch (args[1])
+        for(int i = 1; i < args.Count; i++)
         {
-            case "--privateKey":
-                acc.PrivateKey = args[2];
-                break;
-            case "--publicKey":
-                acc.PublicKey = args[2];
-                break;
-            case "--aesKey":
-                acc.AesKey = Convert.FromBase64String(args[2]);
-                break;
-            case "--userId":
-                if (Accounts.Any(p => p.UserId == args[2] && p.CloudIp == acc.CloudIp))
-                {
-                    Console.WriteLine("Account already existent");
+            switch (args[i])
+            {
+                case "--privateKey":
+                    i++;
+                    acc.PrivateKey = args[i];
+                    break;
+                case "--publicKey":
+                    i++;
+                    acc.PublicKey = args[i];
+                    break;
+                case "--aesKey":
+                    i++;
+                    acc.AesKey = Convert.FromBase64String(args[i]);
+                    break;
+                case "--userId":
+                    if (Accounts.Any(p => p.UserId == args[2] && p.CloudIp == acc.CloudIp))
+                    {
+                        Console.WriteLine("Account already existent");
+                        return;
+                    }
+                    i++;
+                    acc.UserId = args[i];
+                    break;
+                case "--accId":
+                    if (Accounts.Any(p => p.AccId == args[2]))
+                    {
+                        Console.WriteLine("Account already existent");
+                        return;
+                    }
+                    i++;
+                    acc.AccId = args[i];
+                    break;
+                case "--cloudIp":
+                    if (Accounts.Any(p => p.UserId == acc.UserId && p.CloudIp == args[2]))
+                    {
+                        Console.WriteLine("Account already existent");
+                        return;
+                    }
+                    i++;
+                    acc.CloudIp = args[i];
+                    break;
+                case "--aesKeyPath":
+                    i++;
+                    acc.AesKey = File.ReadAllBytes(args[i]);
+                    break;
+                case "--privateKeyPath":
+                    i++;
+                    acc.PrivateKey = File.ReadAllText(args[i]);
+                    break;
+                case "--publicKeyPath":
+                    i++;
+                    acc.PublicKey = File.ReadAllText(args[i]);
+                    break;
+                default:
+                    Console.WriteLine($"{args[i]}: Argument Not Found");
                     return;
-                }
-                acc.UserId = args[2];
-                break;
-            case "--accId":
-                if (Accounts.Any(p => p.AccId == args[2]))
-                {
-                    Console.WriteLine("Account already existent");
-                    return;
-                }
-                acc.AccId = args[2];
-                break;
-            case "--cloudIp":
-                if (Accounts.Any(p => p.UserId == acc.UserId && p.CloudIp == args[2]))
-                {
-                    Console.WriteLine("Account already existent");
-                    return;
-                }
-                acc.CloudIp = args[2];
-                break;
-            default:
-                Console.WriteLine($"{args[1]}: Argument Not Found");
-                return;
+            }
         }
         SaveAccounts();
     }

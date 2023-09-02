@@ -58,40 +58,51 @@ public class Cryptography
     
     public static byte[] EncryptAes(byte[] plainText, byte[] key)
     {
-        using var aes = Aes.Create();
-        aes.KeySize = key.Length * 8;
-        aes.Key = key;
+        if (plainText == null || key == null)
+            throw new ArgumentNullException();
 
-        // Generate a random IV (Initialization Vector) for added security
-        aes.GenerateIV();
-        byte[] iv = aes.IV;
+        using Aes aesAlg = Aes.Create();
+        aesAlg.Mode = CipherMode.CBC;
+        aesAlg.Padding = PaddingMode.PKCS7;
+        aesAlg.KeySize = key.Length * 8;
+        aesAlg.Key = key;
+        aesAlg.GenerateIV(); // Generate a random IV
 
         using MemoryStream msEncrypt = new MemoryStream();
-        using CryptoStream csEncrypt = new CryptoStream(msEncrypt, aes.CreateEncryptor(), CryptoStreamMode.Write);
-        using StreamWriter swEncrypt = new StreamWriter(csEncrypt);
-        // Write the IV to the stream (it will be needed for decryption)
-        msEncrypt.Write(iv, 0, iv.Length);
+        // Write the IV to the beginning of the encrypted output
+        msEncrypt.Write(aesAlg.IV, 0, aesAlg.IV.Length);
 
-        // Write the plaintext to the stream
-        swEncrypt.Write(plainText);
-
+        using CryptoStream csEncrypt = new CryptoStream(msEncrypt, aesAlg.CreateEncryptor(), CryptoStreamMode.Write);
+        csEncrypt.Write(plainText, 0, plainText.Length);
+        csEncrypt.FlushFinalBlock();
         return msEncrypt.ToArray();
     }
 
     public static byte[] DecryptAes(byte[] encryptedBytes, byte[] key)
     {
-        using var aes = Aes.Create();
-        aes.KeySize = key.Length * 8;
-        aes.Key = key;
+        if (encryptedBytes == null || key == null)
+            throw new ArgumentNullException();
 
-        // Get the IV from the beginning of the encrypted text
-        byte[] iv = new byte[aes.BlockSize / 8];
-        Array.Copy(encryptedBytes, 0, iv, 0, iv.Length);
-        aes.IV = iv;
+        using Aes aesAlg = Aes.Create();
+        int ivSize = aesAlg.BlockSize / 8; // IV size in bytes
+        byte[] iv = new byte[ivSize];
+        byte[] ciphertext = new byte[encryptedBytes.Length - ivSize];
+
+        // Extract the IV from the beginning of the ciphertext
+        Array.Copy(encryptedBytes, iv, ivSize);
+        Array.Copy(encryptedBytes, ivSize, ciphertext, 0, ciphertext.Length);
+
+        aesAlg.KeySize = key.Length * 8;
+        aesAlg.Mode = CipherMode.CBC;
+        aesAlg.Padding = PaddingMode.PKCS7;
+        aesAlg.Key = key;
+        aesAlg.IV = iv;
 
         using MemoryStream msDecrypt = new MemoryStream();
-        using CryptoStream csDecrypt = new CryptoStream(msDecrypt, aes.CreateDecryptor(), CryptoStreamMode.Write);
-        // Return the decrypted text
+        using CryptoStream csDecrypt = new CryptoStream(msDecrypt, aesAlg.CreateDecryptor(), CryptoStreamMode.Write);
+        csDecrypt.Write(ciphertext, 0, ciphertext.Length);
+        csDecrypt.FlushFinalBlock();
+
         return msDecrypt.ToArray();
     }
 }

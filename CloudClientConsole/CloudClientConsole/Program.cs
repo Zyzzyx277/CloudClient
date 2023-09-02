@@ -1,37 +1,41 @@
 ﻿using CloudClientConsole;
+using CloudClientConsole.tests;
 
-Console.WriteLine("Hello");
-
-while (true)
+namespace CloudClientConsole;
+class Program
 {
-    Console.Write("> ");
-    var input = Console.ReadLine();
-    if(input is null) continue;
-
-    var commands = new List<string>();
-    commands.Add(string.Empty);
-    foreach (var c in input)
+    public static async Task Main(string[] args)
     {
-        if (c == ' ')
-        {
-            commands.Add(string.Empty);
-            continue;
-        }
-        commands[^1] += c;
+        await Start();
+        //Console.WriteLine(CryptographyTest.TestAes());
     }
 
-    string command = commands[0];
-    commands.RemoveAt(0);
-    switch (command.ToLower())
+    public static async Task Start()
     {
-        case "acc":
-            await Account.AccCommands(commands);
-            break;
-        case "req":
-            await CloudRequest.RequestCommand(commands);
-            break;
-        default:
-            Console.WriteLine($"{command}: Command Not Found");
-            break;
+        Console.WriteLine("Hello");
+
+        while (true)
+        {
+            Console.Write("> ");
+            var input = Console.ReadLine();
+            if (input is null) continue;
+
+            var commands = new List<string>();
+            commands.Add(string.Empty);
+            foreach (var c in input)
+            {
+                if (c == ' ')
+                {
+                    commands.Add(string.Empty);
+                    continue;
+                }
+
+                commands[^1] += c;
+            }
+
+            if (commands[0] == "exit") break;
+            
+            await CommandManager.ProcessCommand(commands);
+        }
     }
 }

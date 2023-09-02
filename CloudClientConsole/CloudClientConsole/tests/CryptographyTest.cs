@@ -1,21 +1,28 @@
-﻿namespace CloudClientConsole.tests;
+﻿using System.Text;
+
+namespace CloudClientConsole.tests;
 
 public class CryptographyTest
 {
-    public void TestAes()
+    public static bool TestAes()
     {
-        var originalText = Guid.NewGuid().ToByteArray();
+        var originalText = Guid.NewGuid().ToString();
 
         var key = Cryptography.GenerateAesKey();
 
-        var encryptedText = Cryptography.EncryptAes(originalText, key);
+        var encryptedText = Cryptography.EncryptAes(Encoding.UTF8.GetBytes(originalText), key);
+
+        //var encryptedTextString = Convert.ToBase64String(encryptedText);
+
+        //encryptedText = Convert.FromBase64String(encryptedTextString);
 
         var decryptedText = Cryptography.DecryptAes(encryptedText, key);
 
-        if (originalText.Length != decryptedText.Length) return;
-        for(int i = 0; i < decryptedText.Length; i++)
-        {
-            if (originalText[i] != decryptedText[i]) return;
-        }
+        Console.WriteLine(originalText);
+        Console.WriteLine(Encoding.UTF8.GetString(decryptedText));
+        
+        if (originalText != Encoding.UTF8.GetString(decryptedText)) return false;
+        
+        return true;
     }
 }

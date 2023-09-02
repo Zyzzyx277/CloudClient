@@ -60,11 +60,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\koron\\RiderProjects\\CloudClientConsole\\CloudClientConsole\\CloudClientConsole.csproj",
+      "projectUniqueName": "C:\\Users\\koron\\RiderProjects\\CloudClientGit\\CloudClientConsole\\CloudClientConsole\\CloudClientConsole.csproj",
       "projectName": "CloudClientConsole",
-      "projectPath": "C:\\Users\\koron\\RiderProjects\\CloudClientConsole\\CloudClientConsole\\CloudClientConsole.csproj",
+      "projectPath": "C:\\Users\\koron\\RiderProjects\\CloudClientGit\\CloudClientConsole\\CloudClientConsole\\CloudClientConsole.csproj",
       "packagesPath": "C:\\Users\\koron\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\koron\\RiderProjects\\CloudClientConsole\\CloudClientConsole\\obj\\",
+      "outputPath": "C:\\Users\\koron\\RiderProjects\\CloudClientGit\\CloudClientConsole\\CloudClientConsole\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\koron\\AppData\\Roaming\\NuGet\\NuGet.Config"

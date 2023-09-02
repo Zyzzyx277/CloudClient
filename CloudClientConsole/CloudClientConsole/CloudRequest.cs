@@ -7,76 +7,15 @@ namespace CloudClientConsole;
 public class CloudRequest
 {
     private static string? key;
-    public static async Task RequestCommand(List<string> args)
-    {
-        string command = args[0];
-        if(args.Count > 0) args.RemoveAt(0);
-        
-        switch (command.ToLower())
-        {
-            case "file":
-                await FileCommands(args);
-                break;
-            case "user":
-                await UserCommands(args);
-                break;
-            case "auth":
-                RequestAuth(args);
-                break;
-            default:
-                Console.WriteLine($"{command}: Command Not Found");
-                break;
-        }
-    }
 
-    public static async Task UserCommands(List<string> args)
+    public static async Task GetUser(string accId)
     {
-        string command = args[0];
-        if(args.Count > 0) args.RemoveAt(0);
-        
-        switch (command.ToLower())
+        var acc = Account.Accounts.FirstOrDefault(p => p.AccId == accId);
+        if (acc is null)
         {
-            case "create":
-                await CreateUserInCloud(args);
-                break;
-            case "ls":
-                await ListUsers(args);
-                break;
-            case "get":
-                await GetUser(args);
-                break;
-            case "rm":
-                DeleteUserFromCloud(args);
-                break;
-            default:
-                Console.WriteLine($"{command}: Command Not Found");
-                break;
+            Console.WriteLine("Account Not Found");
+            return;
         }
-    }
-    
-    public static async Task FileCommands(List<string> args)
-    {
-        string command = args[0];
-        if(args.Count > 0) args.RemoveAt(0);
-        
-        switch (command.ToLower())
-        {
-            case "ls":
-                await GetFilesFromCloud(args);
-                break;
-            case "upload":
-                await UploadFile(args);
-                break;
-            default:
-                Console.WriteLine($"{command}: Command Not Found");
-                break;
-        }
-    }
-
-    public static async Task GetUser(List<string> args)
-    {
-        var acc = Account.Accounts.FirstOrDefault(p => p.AccId == args[0]);
-        if (acc is null) return;
         
         using HttpClient client = new HttpClient();
 
@@ -102,30 +41,42 @@ public class CloudRequest
         Console.WriteLine($"Public Key: {user.PublicKey}");
     }
 
-    public static async Task UploadFile(List<string> args)
+    public static async Task UploadFile(string accId, string filePath, string pathCloud)
     {
-        var acc = Account.Accounts.FirstOrDefault(p => p.AccId == args[0]);
-        if (acc is null) return;
+        var acc = Account.Accounts.FirstOrDefault(p => p.AccId == accId);
+        if (acc?.UserId is null)
+        {
+            Console.WriteLine("Account Not Found");
+            return;
+        }
 
-        var content = await File.ReadAllBytesAsync(args[1]);
-        var fileInfo = new FileInfo(args[1]);
-        var name = Cryptography.EncryptAes(Encoding.UTF8.GetBytes(fileInfo.Name), acc.AesKey);
+        var content = await File.ReadAllBytesAsync(filePath);
         
         content = Cryptography.EncryptAes(content, acc.AesKey);
-        
+
+        var f = new FileInfo(filePath);
+
+        pathCloud = Convert.ToBase64String(Cryptography.EncryptAes(Encoding.UTF8.GetBytes(pathCloud + f.Name), acc.AesKey));
+
         using HttpClient client = new HttpClient();
 
-        FileObjectCloud file = new FileObjectCloud(content, acc.UserId, Guid.NewGuid().ToString(), name);
+        FileObjectCloud file = new FileObjectCloud(Convert.ToBase64String(content), acc.UserId, pathCloud);
 
+        
+        Console.WriteLine(JsonConvert.SerializeObject(file));
         var response = await client.PutAsync($"http://{acc.CloudIp}/api/Files/{acc.UserId}/{key}",
             new StringContent(JsonConvert.SerializeObject(file), Encoding.UTF8, "application/json"));
         Console.WriteLine(response.StatusCode);
     }
 
-    public static async Task ListUsers(List<string> args)
+    public static async Task ListUsers(string accId)
     {
-        var acc = Account.Accounts.FirstOrDefault(p => p.AccId == args[0]);
-        if (acc is null) return;
+        var acc = Account.Accounts.FirstOrDefault(p => p.AccId == accId);
+        if (acc is null)
+        {
+            Console.WriteLine("Account Not Found");
+            return;
+        }
         
         using HttpClient client = new HttpClient();
 
@@ -149,10 +100,14 @@ public class CloudRequest
         }
     }
 
-    public static async Task CreateUserInCloud(List<string> args)
+    public static async Task CreateUserInCloud(string accId, bool saveId = false)
     {
-        var acc = Account.Accounts.FirstOrDefault(p => p.AccId == args[0]);
-        if (acc is null) return;
+        var acc = Account.Accounts.FirstOrDefault(p => p.AccId == accId);
+        if (acc is null)
+        {
+            Console.WriteLine("Account Not Found");
+            return;
+        }
         
         using HttpClient client = new HttpClient();
         
@@ -167,7 +122,7 @@ public class CloudRequest
         }
         Console.WriteLine($"New User: {content}");
 
-        if (args.Contains("-r"))
+        if (saveId)
         {
             acc.UserId = content;
             Account.SaveAccounts();
@@ -175,10 +130,14 @@ public class CloudRequest
         }
     }
 
-    public static async Task GetFilesFromCloud(List<string> args)
+    public static async Task GetFilesFromCloud(string accId)
     {
-        var acc = Account.Accounts.FirstOrDefault(p => p.AccId == args[0]);
-        if (acc is null) return;
+        var acc = Account.Accounts.FirstOrDefault(p => p.AccId == accId);
+        if (acc is null)
+        {
+            Console.WriteLine("Account Not Found");
+            return;
+        }
         
         using HttpClient client = new HttpClient();
 
@@ -192,22 +151,25 @@ public class CloudRequest
 
         string responseJson = await response.Content.ReadAsStringAsync();
 
-        var files = JsonSerializer.Deserialize<IEnumerable<string>>(responseJson);
-        
-        Console.WriteLine(responseJson);
+        var files = JsonSerializer.Deserialize<IEnumerable<string>>(responseJson).ToArray();
 
-        foreach (var name in files)
+        for (int i = 0; i < files.Length; i++)
         {
-            Console.WriteLine(Cryptography.DecryptAes(Convert.FromBase64String(name), acc.AesKey));
-            Console.WriteLine("File: " + Encoding.UTF8.GetString(Cryptography.DecryptAes(Convert.FromBase64String(name), acc.AesKey)));
+            files[i] = Encoding.UTF8.GetString(Cryptography.DecryptAes(Convert.FromBase64String(files[i]), acc.AesKey));
         }
+
+        LocalFileSystem.paths[accId] = new LocalFileSystem.Paths(files, "/");
     }
 
-    public static async void RequestAuth(List<string> args)
+    public static async Task RequestAuth(string accId)
     {
-        var acc = Account.Accounts.FirstOrDefault(p => p.AccId == args[0]);
-        if (acc is null) return;
-        
+        var acc = Account.Accounts.FirstOrDefault(p => p.AccId == accId);
+        if (acc is null)
+        {
+            Console.WriteLine("Account Not Found");
+            return;
+        }
+
         using HttpClient client = new HttpClient();
 
         var response = await client.PostAsync($"http://{acc.CloudIp}/api/Users/{acc.UserId}", null);
@@ -225,9 +187,9 @@ public class CloudRequest
         Console.WriteLine($"KeyDecrypted: {key}");
     }
 
-    public static async void DeleteUserFromCloud(List<string> args)
+    public static async void DeleteUserFromCloud(string accId)
     {
-        var acc = Account.Accounts.FirstOrDefault(p => p.AccId == args[0]);
+        var acc = Account.Accounts.FirstOrDefault(p => p.AccId == accId);
         if (acc is null) return;
         
         using HttpClient client = new HttpClient();

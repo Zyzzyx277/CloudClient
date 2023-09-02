@@ -1,0 +1,17 @@
+C:\Users\koron\RiderProjects\CloudClientGit\CloudClientConsole\CloudClientConsole\bin\Debug\net7.0\CloudClientConsole.exe
+C:\Users\koron\RiderProjects\CloudClientGit\CloudClientConsole\CloudClientConsole\bin\Debug\net7.0\CloudClientConsole.deps.json
+C:\Users\koron\RiderProjects\CloudClientGit\CloudClientConsole\CloudClientConsole\bin\Debug\net7.0\CloudClientConsole.runtimeconfig.json
+C:\Users\koron\RiderProjects\CloudClientGit\CloudClientConsole\CloudClientConsole\bin\Debug\net7.0\CloudClientConsole.dll
+C:\Users\koron\RiderProjects\CloudClientGit\CloudClientConsole\CloudClientConsole\bin\Debug\net7.0\CloudClientConsole.pdb
+C:\Users\koron\RiderProjects\CloudClientGit\CloudClientConsole\CloudClientConsole\bin\Debug\net7.0\Newtonsoft.Json.dll
+C:\Users\koron\RiderProjects\CloudClientGit\CloudClientConsole\CloudClientConsole\obj\Debug\net7.0\CloudClientConsole.csproj.AssemblyReference.cache
+C:\Users\koron\RiderProjects\CloudClientGit\CloudClientConsole\CloudClientConsole\obj\Debug\net7.0\CloudClientConsole.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\koron\RiderProjects\CloudClientGit\CloudClientConsole\CloudClientConsole\obj\Debug\net7.0\CloudClientConsole.AssemblyInfoInputs.cache
+C:\Users\koron\RiderProjects\CloudClientGit\CloudClientConsole\CloudClientConsole\obj\Debug\net7.0\CloudClientConsole.AssemblyInfo.cs
+C:\Users\koron\RiderProjects\CloudClientGit\CloudClientConsole\CloudClientConsole\obj\Debug\net7.0\CloudClientConsole.csproj.CoreCompileInputs.cache
+C:\Users\koron\RiderProjects\CloudClientGit\CloudClientConsole\CloudClientConsole\obj\Debug\net7.0\CloudClientConsole.csproj.CopyComplete
+C:\Users\koron\RiderProjects\CloudClientGit\CloudClientConsole\CloudClientConsole\obj\Debug\net7.0\CloudClientConsole.dll
+C:\Users\koron\RiderProjects\CloudClientGit\CloudClientConsole\CloudClientConsole\obj\Debug\net7.0\refint\CloudClientConsole.dll
+C:\Users\koron\RiderProjects\CloudClientGit\CloudClientConsole\CloudClientConsole\obj\Debug\net7.0\CloudClientConsole.pdb
+C:\Users\koron\RiderProjects\CloudClientGit\CloudClientConsole\CloudClientConsole\obj\Debug\net7.0\CloudClientConsole.genruntimeconfig.cache
+C:\Users\koron\RiderProjects\CloudClientGit\CloudClientConsole\CloudClientConsole\obj\Debug\net7.0\ref\CloudClientConsole.dll
