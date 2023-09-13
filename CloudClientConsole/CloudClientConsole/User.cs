@@ -10,7 +10,6 @@ public class User
 
     public string Id { get; set; }
     public string PublicKey { get; set; }
-    public string? AuthKey { get; set; }
 
     public static HashSet<User> UserDb = new();
 }

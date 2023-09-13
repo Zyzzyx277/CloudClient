@@ -102,7 +102,49 @@ public class Cryptography
         using CryptoStream csDecrypt = new CryptoStream(msDecrypt, aesAlg.CreateDecryptor(), CryptoStreamMode.Write);
         csDecrypt.Write(ciphertext, 0, ciphertext.Length);
         csDecrypt.FlushFinalBlock();
-
+        
         return msDecrypt.ToArray();
     }
+    
+    public static async Task EncryptStreamAes(Stream inputStream, byte[] key, Stream outputStream)
+    {
+        using Aes aesAlg = Aes.Create();
+        aesAlg.KeySize = key.Length * 8;
+        aesAlg.Mode = CipherMode.CBC;
+        aesAlg.Padding = PaddingMode.PKCS7;
+        aesAlg.Key = key;
+        aesAlg.GenerateIV();
+
+        // Create an encryptor to perform the stream transform
+        ICryptoTransform encryptor = aesAlg.CreateEncryptor(aesAlg.Key, aesAlg.IV);
+
+        // Create a CryptoStream to write the encrypted data to the output stream
+        await using CryptoStream csEncrypt = new CryptoStream(outputStream, encryptor, CryptoStreamMode.Write);
+        csEncrypt.Write(aesAlg.IV, 0, aesAlg.IV.Length);
+            
+        await inputStream.CopyToAsync(csEncrypt);
+        await csEncrypt.FlushFinalBlockAsync();
+    }
+    public static async Task DecryptStreamAes(Stream inputStream, byte[] key, byte[] iv, Stream outputStream)
+    {
+        using Aes aesAlg = Aes.Create();
+        aesAlg.KeySize = key.Length * 8;
+        aesAlg.Mode = CipherMode.CBC;
+        aesAlg.Padding = PaddingMode.PKCS7;
+        aesAlg.Key = key;
+        aesAlg.IV = iv;
+
+        // Create a decryptor to perform the stream transform
+        ICryptoTransform decryptor = aesAlg.CreateDecryptor(aesAlg.Key, aesAlg.IV);
+
+        // Create a CryptoStream to read the encrypted data from the input stream
+        await using (CryptoStream csDecrypt = new CryptoStream(inputStream, decryptor, CryptoStreamMode.Read))
+        {
+            await csDecrypt.CopyToAsync(outputStream);
+        }
+
+        // Reset the position of the output stream to the beginning
+        outputStream.Position = 0;
+    }
+    
 }

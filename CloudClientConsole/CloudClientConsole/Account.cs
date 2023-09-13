@@ -1,6 +1,6 @@
-﻿using System.Net;
-using System.Text;
-using System.Text.Json;
+﻿using System.Text;
+using Newtonsoft.Json;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace CloudClientConsole;
 
@@ -14,6 +14,109 @@ public class Account
     public string AccId { get; set; }
 
     public static readonly HashSet<Account> Accounts = LoadAccounts();
+
+    public static void DeleteAccount(string accId)
+    {
+        if(Accounts.RemoveWhere(p => p.AccId == accId) == 1)
+        {
+            Console.WriteLine("Removed one Account");
+            SaveAccounts();
+            return;
+        }
+        Console.WriteLine("No Account found");
+    }
+
+    public static async Task FindExport(string? disk = null)
+    {
+        if (disk is not null)
+        {
+            if (await SearchFile(disk.ToUpper() + ":\\")) return;
+            Console.WriteLine("Found No File");
+            return;
+        }
+        
+        var allDrives = DriveInfo.GetDrives();
+        foreach (var drive in allDrives)
+        {
+            if (await SearchFile(drive.Name))
+            {
+                return;
+            }
+        }
+        Console.WriteLine("Found No File");
+    }
+
+    private static async Task<bool> SearchFile(string directory)
+    {
+        string[] files;
+        try
+        {
+            files = Directory.GetFiles(directory, "*.export");
+        }
+        catch
+        {
+            return false;
+        }
+        foreach (var file in files)
+        {
+            Console.WriteLine($"Found File {file}. Is this the right one (y/n):");
+            var input = Console.ReadLine();
+            if (input.ToLower() == "n") continue;
+
+            Console.WriteLine("Do you want to load it (y/n):");
+
+            input = Console.ReadLine();
+            if (input.ToLower() == "n") return true;
+            await ImportAccount(file);
+            return true;
+        }
+
+        var directories = Directory.GetDirectories(directory);
+        foreach (var d in directories)
+        {
+            if (await SearchFile(d)) return true;
+        }
+
+        return false;
+    }
+
+    public static async Task ImportAccount(string path)
+    {
+        var accJson = await File.ReadAllTextAsync(path);
+
+        var acc = JsonSerializer.Deserialize<Account>(accJson);
+
+        if (Accounts.Any(p => p.AccId == acc.AccId))
+        {
+            Console.WriteLine("Account Id already existent");
+            return;
+        }
+
+        Accounts.Add(acc);
+        SaveAccounts();
+    }
+
+    public static async Task ExportAccount(string accId)
+    {
+        await ExportAccount(accId, AppDomain.CurrentDomain.BaseDirectory + "..\\..\\..\\acc.export");
+    }
+
+    public static async Task ExportAccount(string accId, string path)
+    {
+        var acc = Accounts.FirstOrDefault(p => p.AccId == accId);
+        if (acc is null)
+        {
+            Console.WriteLine("Account Not Found");
+            return;
+        }
+
+        var accJson = JsonConvert.SerializeObject(acc);
+
+        await using var wr = new StreamWriter(path);
+        await wr.WriteLineAsync(accJson);
+
+        Console.WriteLine($"Saved to {path}");
+    }
 
     public static void ShowAccounts()
     {
@@ -29,8 +132,14 @@ public class Account
 
     public static async Task AddAccount(List<string> args)
     {
+        if (!args.Contains("--accId"))
+        {
+            Console.WriteLine("missing accId");
+            return;
+        }
+
         Account acc = new Account();
-        
+
         for (int i = 0; i < args.Count; i++)
         {
             switch (args[i])
@@ -57,7 +166,7 @@ public class Account
                     break;
                 case "--accId":
                     i++;
-                    acc.AccId =args[i];
+                    acc.AccId = args[i];
                     break;
                 case "--aesKeyPath":
                     i++;
@@ -81,7 +190,7 @@ public class Account
         }
 
         if (acc.UserId is null && acc.CloudIp is not null) await CloudRequest.CreateUserInCloud(acc.AccId, true);
-        
+
         Accounts.Add(acc);
         Console.WriteLine("Account created");
         SaveAccounts();
@@ -127,7 +236,7 @@ public class Account
         var acc = Accounts.FirstOrDefault(p => p.AccId == args[0]);
         if (acc is null) return;
 
-        for(int i = 1; i < args.Count; i++)
+        for (int i = 1; i < args.Count; i++)
         {
             switch (args[i])
             {
@@ -149,6 +258,7 @@ public class Account
                         Console.WriteLine("Account already existent");
                         return;
                     }
+
                     i++;
                     acc.UserId = args[i];
                     break;
@@ -158,6 +268,7 @@ public class Account
                         Console.WriteLine("Account already existent");
                         return;
                     }
+
                     i++;
                     acc.AccId = args[i];
                     break;
@@ -167,6 +278,7 @@ public class Account
                         Console.WriteLine("Account already existent");
                         return;
                     }
+
                     i++;
                     acc.CloudIp = args[i];
                     break;
@@ -187,18 +299,19 @@ public class Account
                     return;
             }
         }
+
         SaveAccounts();
     }
 
     public static void SaveAccounts()
     {
         string filePath = AppDomain.CurrentDomain.BaseDirectory + "..\\..\\..\\savedata\\accounts.txt";
-        
+
         try
         {
             string json = JsonSerializer.Serialize(Accounts);
             File.WriteAllText(filePath, json);
-            
+
             Console.WriteLine("HashSet saved to file successfully.");
         }
         catch (IOException ex)

@@ -1,4 +1,5 @@
-﻿using CloudClientConsole;
+﻿using System.Net;
+using CloudClientConsole;
 using CloudClientConsole.tests;
 
 namespace CloudClientConsole;
@@ -8,10 +9,12 @@ class Program
     {
         await Start();
         //Console.WriteLine(CryptographyTest.TestAes());
+        //Console.WriteLine(await CryptographyTest.TestAesStream());
     }
 
     public static async Task Start()
     {
+        if (Account.Accounts.Count == 1) LocalFileSystem.id = Account.Accounts.First().AccId;
         Console.WriteLine("Hello");
 
         while (true)
@@ -20,6 +23,9 @@ class Program
             var input = Console.ReadLine();
             if (input is null) continue;
 
+            input = RemoveDoubleWhitespace(input);
+            if(!input.Any()) continue;
+            
             var commands = new List<string>();
             commands.Add(string.Empty);
             foreach (var c in input)
@@ -37,5 +43,19 @@ class Program
             
             await CommandManager.ProcessCommand(commands);
         }
+    }
+
+    private static string RemoveDoubleWhitespace(string args)
+    {
+        args = args.Trim();
+        for (int i = 0; i < args.Length-1; i++)
+        {
+            if (args[i] == ' ' && args[i + 1] == ' ')
+            {
+                args = args.Remove(i, 1);
+                i--;
+            }
+        }
+        return args;
     }
 }

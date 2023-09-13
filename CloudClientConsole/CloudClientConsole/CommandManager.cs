@@ -30,12 +30,51 @@ public class CommandManager
         switch (command.ToLower())
         {
             case "ls":
+                if (args.All(p => p[0] == '-'))
+                {
+                    if (LocalFileSystem.id is not null)
+                    {
+                        if(args.Contains("-a"))LocalFileSystem.ShowFiles(LocalFileSystem.id, true);
+                        else LocalFileSystem.ShowFiles(LocalFileSystem.id);
+                        return;
+                    }
+                    Console.WriteLine("Not enough Arguments");
+                    break;
+                }
+                if(args.Contains("-a"))LocalFileSystem.ShowFiles(args[0], true);
+                else LocalFileSystem.ShowFiles(args[0]);
+                break;
+            case "cur":
+                if (args.Count < 1)
+                {
+                    if (LocalFileSystem.id is not null)
+                    {
+                        LocalFileSystem.ShowCurrentDirectory(LocalFileSystem.id);
+                        break;
+                    }
+                    Console.WriteLine("Not enough Arguments");
+                    break;
+                }
+                LocalFileSystem.ShowCurrentDirectory(args[0]);
+                break;
+            case "cd":
+                if (args.Count < 2)
+                {
+                    Console.WriteLine("Not enough Arguments");
+                    break;
+                }
+                LocalFileSystem.ChangeCurrentDirectory(args[0], args[1]);
+                break;
+            case "id":
                 if (args.Count < 1)
                 {
                     Console.WriteLine("Not enough Arguments");
+                    break;
                 }
-                if(args.Count < 2)LocalFileSystem.ShowFiles(args[0]);
-                else if(args.Contains("-a"))LocalFileSystem.ShowFiles(args[0], true);
+                LocalFileSystem.ChaneId(args[0]);
+                break;
+            case "curid":
+                LocalFileSystem.ShowCurrentId();
                 break;
             default:
                 Console.WriteLine($"{command}: Command Not Found");
@@ -60,6 +99,7 @@ public class CommandManager
                 if (args.Count < 1)
                 {
                     Console.WriteLine("Not enough Arguments");
+                    break;
                 }
                 await CloudRequest.RequestAuth(args[0]);
                 break;
@@ -77,12 +117,12 @@ public class CommandManager
         switch (command.ToLower())
         {
             case "create":
-                if (args.Count < 1)
+                if (args.All(p => p[0] == '-'))
                 {
                     Console.WriteLine("Not enough Arguments");
                     return;
                 }
-                await CloudRequest.CreateUserInCloud(args[0], args.Contains("-r"));
+                await CloudRequest.CreateUserInCloud(args.Where(p => !p.Contains('-')).ToArray()[0], args.Contains("-r"));
                 break;
             case "ls":
                 if (args.Count < 1)
@@ -101,11 +141,17 @@ public class CommandManager
                 await CloudRequest.GetUser(args[0]);
                 break;
             case "rm":
-                if (args.Count < 1)
+                if (!args.Any(p => p[0] != '-'))
                 {
                     Console.WriteLine("Not enough Arguments");
+                    return;
                 }
-                CloudRequest.DeleteUserFromCloud(args[0]);
+                if (args.Contains("-t"))
+                {
+                    args.Remove("-t");
+                    await CloudRequest.RequestAuth(args[0]);
+                }
+                await CloudRequest.DeleteUserFromCloud(args[0]);
                 break;
             default:
                 Console.WriteLine($"{command}: Command Not Found");
@@ -127,12 +173,43 @@ public class CommandManager
                 await CloudRequest.GetFilesFromCloud(args[0]);
                 break;
             case "upload":
-                if (args.Count < 3)
+                if (args.Count(p => p[0] != '-') < 3)
                 {
                     Console.WriteLine("Not enough Arguments");
                     return;
                 }
+                if (args.Contains("-t"))
+                {
+                    args.Remove("-t");
+                    await CloudRequest.RequestAuth(args[0]);
+                }
                 await CloudRequest.UploadFile(args[0], args[1], args[2]);
+                break;
+            case "get":
+                if (args.Count < 3)
+                {
+                    if (LocalFileSystem.id is not null && args.Count >= 2)
+                    {
+                        await CloudRequest.PullFile(LocalFileSystem.id, args[0], args[1]);
+                        break;
+                    }
+                    Console.WriteLine("Not enough Arguments");
+                    break;
+                }
+                await CloudRequest.PullFile(args[0], args[1], args[2]);
+                break;
+            case "rm":
+                if (args.Count(p => !p.Contains('-')) < 2)
+                {
+                    Console.WriteLine("Not enough Arguments");
+                    return;
+                }
+                if (args.Contains("-t"))
+                {
+                    args.Remove("-t");
+                    await CloudRequest.RequestAuth(args[0]);
+                }
+                await CloudRequest.DeleteFileFromCloud(args[0], args[1]);
                 break;
             default:
                 Console.WriteLine($"{command}: Command Not Found");
@@ -154,6 +231,12 @@ public class CommandManager
                 await Account.AddAccount(args);
                 break;
             case "update":
+                int optionals = args.Count(p => p.Contains('-')) * 2;
+                if (args.Count - optionals < 1)
+                {
+                    Console.WriteLine("Not enough Arguments");
+                    return;
+                }
                 Account.UpdateAccount(args);
                 break;
             case "get":
@@ -162,6 +245,40 @@ public class CommandManager
                     Console.WriteLine("Not enough Arguments");
                 }
                 Account.GetProp(args[0], args[1]);
+                break;
+            case "save":
+                switch (args.Count)
+                {
+                    case < 1:
+                        Console.WriteLine("Not enough Arguments");
+                        return;
+                    case 1:
+                        await Account.ExportAccount(args[0]);
+                        break;
+                    default:
+                        await Account.ExportAccount(args[0], args[1]);
+                        break;
+                }
+                break;
+            case "load":
+                if (args.Count < 1)
+                {
+                    Console.WriteLine("Not enough Arguments");
+                    return;
+                }
+                await Account.ImportAccount(args[0]);
+                break;
+            case "scan":
+                if(args.Any()) await Account.FindExport(args[0]);
+                else await Account.FindExport();
+                break;
+            case "del":
+                if (!args.Any())
+                {
+                    Console.WriteLine("Not enough Arguments");
+                    break;
+                }
+                Account.DeleteAccount(args[0]);
                 break;
             default:
                 Console.WriteLine($"{command}: Command Not Found");
