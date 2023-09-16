@@ -20,9 +20,9 @@ public class LocalFileSystem
             Console.WriteLine("Account has no local Files");
             return;
         }
-
-        paths[accId].CurrentPath = paths[accId].PathsTree.GetDirectory(PathToArray(path));
-        Console.WriteLine($"CurrentPath: {path}");
+        
+        paths[accId].CurrentPath = paths[accId].PathsTree.GetDirectory(PathToArray(path, accId));
+        Console.WriteLine($"CurrentPath: {paths[accId].CurrentPath.GetPathString()}");
     }
     
     public static void ShowCurrentId()
@@ -37,7 +37,7 @@ public class LocalFileSystem
 
     public static void ShowCurrentDirectory(string accId)
     {
-        var directory = paths.TryGetValue(accId, out var path) ? path.CurrentPath.name : "Account has no local Files";
+        var directory = paths.TryGetValue(accId, out var path) ? path.CurrentPath.GetPathString() : "Account has no local Files";
         if (directory == "") directory = "/";
         Console.WriteLine(directory);
     }
@@ -77,17 +77,17 @@ public class LocalFileSystem
         public readonly Tree PathsTree = new Tree();
         public Node CurrentPath {get;set;}
 
-        public Paths(IEnumerable<(string, string)> paths)
+        public Paths(IEnumerable<(string, string)> paths, string id)
         {
             foreach (var path in paths)
             {
-                PathsTree.AddFile(PathToArray(path.Item1), path);
+                PathsTree.AddFile(PathToArray(path.Item1, id), path);
             }
             CurrentPath = PathsTree.GetDirectory(new List<string>{""});
         }
     }
 
-    public static List<string> PathToArray(string path)
+    public static List<string> PathToArray(string path, string? id)
     {
         var pathList = new List<string>();
         pathList.Add("");
@@ -103,6 +103,35 @@ public class LocalFileSystem
             pathList[^1] += c;
         }
 
+        if (id is not null) pathList = ManageDots(pathList, id);
         return pathList;
+    }
+
+    public static List<string> ManageDots(List<string> path, string id)
+    {
+        if (path.Count < 1) return path;
+        
+        if (path[0] == ".")
+        {
+            if (!paths.ContainsKey(id))
+            {
+                Console.WriteLine("Account has no local Files");
+                return path;
+            }
+            var curPath = paths[id];
+            path.RemoveAt(0);
+            path = curPath.CurrentPath.GetPath(new Stack<string>()).Concat(path).ToList();
+        }
+        
+        for (int i = 1; i < path.Count; i++)
+        {
+            if (path[i] != "..") continue;
+            path.RemoveAt(i);
+            path.RemoveAt(i - 1);
+            i -= 2;
+        }
+
+        
+        return path;
     }
 }

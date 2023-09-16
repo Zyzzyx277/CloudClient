@@ -98,7 +98,7 @@ public class Account
 
     public static async Task ExportAccount(string accId)
     {
-        await ExportAccount(accId, AppDomain.CurrentDomain.BaseDirectory + "..\\..\\..\\acc.export");
+        await ExportAccount(accId, AppDomain.CurrentDomain.BaseDirectory + "\\acc.export");
     }
 
     public static async Task ExportAccount(string accId, string path)
@@ -112,8 +112,21 @@ public class Account
 
         var accJson = JsonConvert.SerializeObject(acc);
 
-        await using var wr = new StreamWriter(path);
-        await wr.WriteLineAsync(accJson);
+        try
+        {
+            await using var wr = new StreamWriter(path);
+            await wr.WriteLineAsync(accJson);
+        }
+        catch (IOException e)
+        {
+            Console.WriteLine(e.Message);
+            return;
+        }
+        catch (UnauthorizedAccessException e)
+        {
+            Console.WriteLine(e.Message);
+            return;
+        }
 
         Console.WriteLine($"Saved to {path}");
     }
@@ -130,7 +143,7 @@ public class Account
         }
     }
 
-    public static async Task AddAccount(List<string> args)
+    public static async Task AddAccount(List<string> args, bool generate)
     {
         if (!args.Contains("--accId"))
         {
@@ -188,10 +201,30 @@ public class Account
             Console.WriteLine("Account already existent");
             return;
         }
-
-        if (acc.UserId is null && acc.CloudIp is not null) await CloudRequest.CreateUserInCloud(acc.AccId, true);
-
+        
         Accounts.Add(acc);
+
+        if(generate)
+        {
+            if (acc.PublicKey is null || acc.PrivateKey is null)
+            {
+                Console.WriteLine("Generating RSA Keys");
+                var keyPair = Cryptography.GenerateKey(2048);
+                acc.PrivateKey = keyPair.Item2;
+                acc.PublicKey = keyPair.Item1;
+            }
+
+            if (acc.AesKey is null)
+            {
+                Console.WriteLine("Generating AES Key");
+                acc.AesKey = Cryptography.GenerateAesKey();
+            }
+            if (acc.UserId is null && acc.CloudIp is not null)
+            {
+                Console.WriteLine("Generating User");
+                await CloudRequest.CreateUserInCloud(acc.AccId, true, false);
+            }
+        }
         Console.WriteLine("Account created");
         SaveAccounts();
     }
@@ -305,10 +338,11 @@ public class Account
 
     public static void SaveAccounts()
     {
-        string filePath = AppDomain.CurrentDomain.BaseDirectory + "..\\..\\..\\savedata\\accounts.txt";
+        string filePath = AppDomain.CurrentDomain.BaseDirectory + "\\savedata\\accounts.txt";
 
         try
         {
+            Directory.CreateDirectory(AppDomain.CurrentDomain.BaseDirectory + "\\savedata");
             string json = JsonSerializer.Serialize(Accounts);
             File.WriteAllText(filePath, json);
 
@@ -322,7 +356,7 @@ public class Account
 
     public static HashSet<Account> LoadAccounts()
     {
-        string filePath = AppDomain.CurrentDomain.BaseDirectory + "..\\..\\..\\savedata\\accounts.txt";
+        string filePath = AppDomain.CurrentDomain.BaseDirectory + "\\savedata\\accounts.txt";
 
         try
         {

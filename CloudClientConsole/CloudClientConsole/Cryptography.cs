@@ -5,6 +5,20 @@ namespace CloudClientConsole;
 
 public class Cryptography
 {
+    
+    public static (string, string) GenerateKey(int keySize)
+    {
+        //lets take a new CSP with a new 2048 bit rsa key pair
+        var csp = new RSACryptoServiceProvider(keySize);
+
+        //how to get the private key
+        var privKey = csp.ExportRSAPrivateKeyPem();
+
+        //and the public key ...
+        var pubKey = csp.ExportRSAPublicKeyPem();
+
+        return (pubKey, privKey);
+    }
     public static string Encrypt(string textToEncrypt, string publicKeyString)
     {
         var bytesToEncrypt = Encoding.UTF8.GetBytes(textToEncrypt);
@@ -25,24 +39,20 @@ public class Cryptography
     
     public static string Decrypt(string textToDecrypt, string privateKeyString)
     {
-
-        using (var rsa = new RSACryptoServiceProvider(2048))
+        using var rsa = new RSACryptoServiceProvider(2048);
+        try
         {
-            try
-            {
+            // server decrypting data with private key                    
+            rsa.ImportFromPem(privateKeyString);
 
-                // server decrypting data with private key                    
-                rsa.ImportFromPem(privateKeyString);
-
-                var resultBytes = Convert.FromBase64String(textToDecrypt);
-                var decryptedBytes = rsa.Decrypt(resultBytes, true);
-                var decryptedData = Encoding.UTF8.GetString(decryptedBytes);
-                return decryptedData.ToString();
-            }
-            finally
-            {
-                rsa.PersistKeyInCsp = false;
-            }
+            var resultBytes = Convert.FromBase64String(textToDecrypt);
+            var decryptedBytes = rsa.Decrypt(resultBytes, true);
+            var decryptedData = Encoding.UTF8.GetString(decryptedBytes);
+            return decryptedData.ToString();
+        }
+        finally
+        {
+            rsa.PersistKeyInCsp = false;
         }
     }
 

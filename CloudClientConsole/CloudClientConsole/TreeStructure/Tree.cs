@@ -2,11 +2,11 @@
 
 public class Tree
 {
-    private Node root = new Node("");
+    private Node root = new Node("", null);
 
-    public (string, string)? GetFile(List<string> path)
+    public (string, string)? GetFile(List<string> path, string id)
     {
-        return root.GetFile(path);
+        return root.GetFile(path, id);
     }
     
     public IEnumerable<(string, string)> ListAllFiles()

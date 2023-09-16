@@ -73,7 +73,7 @@ public class CommandManager
                 }
                 LocalFileSystem.ChaneId(args[0]);
                 break;
-            case "curid":
+            case "curId":
                 LocalFileSystem.ShowCurrentId();
                 break;
             default:
@@ -102,6 +102,17 @@ public class CommandManager
                     break;
                 }
                 await CloudRequest.RequestAuth(args[0]);
+                break;
+            case "rm":
+                if (args.Count < 2)
+                {
+                    Console.WriteLine("Not enough Arguments");
+                    return;
+                }
+                Console.Write("This will delete all Data on chosen Server. Proceed(y/n)?\n\r> ");
+                string? input = Console.ReadLine();
+                if (input is null ||input.ToLower() != "y") return;
+                await CloudRequest.DeleteAll(args[0], args[1]);
                 break;
             default:
                 Console.WriteLine($"{command}: Command Not Found");
@@ -228,7 +239,7 @@ public class CommandManager
                 Account.ShowAccounts();
                 break;
             case "add":
-                await Account.AddAccount(args);
+                await Account.AddAccount(args, args.Contains("--generate"));
                 break;
             case "update":
                 int optionals = args.Count(p => p.Contains('-')) * 2;
@@ -272,7 +283,7 @@ public class CommandManager
                 if(args.Any()) await Account.FindExport(args[0]);
                 else await Account.FindExport();
                 break;
-            case "del":
+            case "rm":
                 if (!args.Any())
                 {
                     Console.WriteLine("Not enough Arguments");

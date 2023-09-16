@@ -29,7 +29,7 @@ public class CryptographyTest
     
     /*public static async Task<bool> TestAesStream()
     {
-        await using FileStream ms = new FileStream(AppDomain.CurrentDomain.BaseDirectory + "..\\..\\..\\savedata\\accounts.txt", FileMode.Open);
+        await using FileStream ms = new FileStream(AppDomain.CurrentDomain.BaseDirectory + "\\savedata\\accounts.txt", FileMode.Open);
         var key = Cryptography.GenerateAesKey();
 
         var encryptedStream = await Cryptography.EncryptStreamAes(ms, key, new MemoryStream());
@@ -37,7 +37,7 @@ public class CryptographyTest
         var textEncrypted = new byte[encryptedStream.Length];
         await encryptedStream.ReadAsync(textEncrypted, 0, textEncrypted.Length);
 
-        await using var sw = new FileStream(AppDomain.CurrentDomain.BaseDirectory + "..\\..\\..\\savedata\\accounts2.txt", FileMode.Create);
+        await using var sw = new FileStream(AppDomain.CurrentDomain.BaseDirectory + "\\savedata\\accounts2.txt", FileMode.Create);
         await Cryptography.DecryptStreamAes(new MemoryStream(textEncrypted), key, sw);
 
         return true;

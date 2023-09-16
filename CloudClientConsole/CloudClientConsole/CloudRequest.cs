@@ -1,7 +1,10 @@
 ﻿using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using Microsoft.VisualBasic.FileIO;
 using Newtonsoft.Json;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
@@ -10,6 +13,26 @@ namespace CloudClientConsole;
 public class CloudRequest
 {
     private static string? key;
+    //private static X509Certificate2 customCertificate = new X509Certificate2(
+        //AppDomain.CurrentDomain.BaseDirectory + "\\Certificates\\server.crt");
+
+    public static async Task DeleteAll(string accId, string key)
+    {
+        var acc = Account.Accounts.FirstOrDefault(p => p.AccId == accId);
+        if (acc is null)
+        {
+            Console.WriteLine("Account Not Found");
+            return;
+        }
+
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"http://{acc.CloudIp}/api/admin");
+        request.Headers.Add("key", key);
+
+        var response = await SendRequest(request);
+        if (response is null) return;
+        
+        Console.WriteLine($"{response.StatusCode}({response.ReasonPhrase})");
+    }
 
     public static async Task DeleteFileFromCloud(string accId, string fileId)
     {
@@ -34,7 +57,7 @@ public class CloudRequest
             return;
         }
 
-        var filePaths = LocalFileSystem.paths[accId].PathsTree.GetFile(LocalFileSystem.PathToArray(fileId));
+        var filePaths = LocalFileSystem.paths[accId].PathsTree.GetFile(LocalFileSystem.PathToArray(fileId, accId), accId);
 
         if (filePaths is null)
         {
@@ -44,11 +67,10 @@ public class CloudRequest
 
         var fileIdEncrypted = (((string, string))filePaths).Item2;
 
-        var client = new HttpClient();
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"http://{acc.CloudIp}/api/Files/{acc.UserId}/{key}/{fileIdEncrypted}");
-        request.Content =
-            new StringContent(JsonConvert.SerializeObject(fileIdEncrypted), Encoding.UTF8, "application/json");
-        var response = await client.SendAsync(request);
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"http://{acc.CloudIp}/api/Files/{acc.UserId}/{fileIdEncrypted}");
+        request.Headers.Add("key", key);
+        var response = await SendRequest(request);
+        if (response is null) return;
 
         Console.WriteLine(response.StatusCode);
 
@@ -64,9 +86,8 @@ public class CloudRequest
             return;
         }
 
-        using HttpClient client = new HttpClient();
-
-        var response = await client.GetAsync($"http://{acc.CloudIp}/api/Users/{acc.UserId}");
+        var response = await SendRequest(new HttpRequestMessage(HttpMethod.Get, $"http://{acc.CloudIp}/api/Users/{acc.UserId}"));
+        if (response is null) return;
 
         var content = await response.Content.ReadAsStringAsync();
 
@@ -101,7 +122,7 @@ public class CloudRequest
             return;
         }
 
-        string uploadBuffer = AppDomain.CurrentDomain.BaseDirectory + "..\\..\\..\\uploadBuffer";
+        string uploadBuffer = AppDomain.CurrentDomain.BaseDirectory + "\\uploadBuffer";
 
         if(!await ChunkFile(filePath, uploadBuffer, acc.AesKey)) return;
         
@@ -114,7 +135,7 @@ public class CloudRequest
 
         pathCloud = Convert.ToBase64String(Cryptography.EncryptAes(Encoding.UTF8.GetBytes(pathCloud), acc.AesKey));
         
-        string uri = $"http://{acc.CloudIp}/api/Files/{acc.UserId}/{key}/{newId}/{pathCloud}";
+        string uri = $"http://{acc.CloudIp}/api/Files/{acc.UserId}/{newId}";
 
         await using (var fs = new FileStream(uploadBuffer + "/encrypted.dat", FileMode.Open))
         {
@@ -123,19 +144,17 @@ public class CloudRequest
             fileContent.Headers.ContentLength = null;
             var formData = new MultipartFormDataContent();
             formData.Add(fileContent, "file", "file-name.txt");
+            
+            Console.WriteLine("Uploading File");
 
-            try
-            {
-                using HttpClient client = new HttpClient();
-                Console.WriteLine("Uploading File");
-                var response = await client.PutAsync(uri, formData);
+            var request = new HttpRequestMessage(HttpMethod.Put, uri);
+            request.Content = formData;
+            request.Headers.Add("key", key);
+            request.Headers.Add("path", pathCloud);
+            var response = await SendRequest(request);
+            if (response is null) return;
 
-                if (!response.IsSuccessStatusCode) Console.WriteLine($"{response.StatusCode}({response.ReasonPhrase})");
-            }
-            catch
-            {
-                Console.WriteLine("Connection not possible");
-            }
+            if (!response.IsSuccessStatusCode) Console.WriteLine($"{response.StatusCode}({response.ReasonPhrase})");
         }
         
         File.Delete(uploadBuffer + "/encrypted.dat");
@@ -178,9 +197,8 @@ public class CloudRequest
             return;
         }
 
-        using HttpClient client = new HttpClient();
-
-        var response = await client.GetAsync($"http://{acc.CloudIp}/api/Users");
+        var response = await SendRequest(new HttpRequestMessage(HttpMethod.Get, $"http://{acc.CloudIp}/api/Users"));
+        if (response is null) return;
 
         var content = await response.Content.ReadAsStringAsync();
 
@@ -203,7 +221,7 @@ public class CloudRequest
         }
     }
 
-    public static async Task CreateUserInCloud(string accId, bool saveId = false)
+    public static async Task CreateUserInCloud(string accId, bool saveId = false, bool saveHashSet = true)
     {
         var acc = Account.Accounts.FirstOrDefault(p => p.AccId == accId);
         if (acc is null)
@@ -211,12 +229,13 @@ public class CloudRequest
             Console.WriteLine("Account Not Found");
             return;
         }
+
+        var request = new HttpRequestMessage(HttpMethod.Put, $"http://{acc.CloudIp}/api/Users");
+        request.Content = new StringContent(JsonConvert.SerializeObject(acc.PublicKey), Encoding.UTF8, "application/json");
+
+        var response = await SendRequest(request);
+        if (response is null) return;
         
-        using HttpClient client = new HttpClient();
-
-        var response = await client.PutAsync($"http://{acc.CloudIp}/api/Users",
-            new StringContent(JsonConvert.SerializeObject(acc.PublicKey), Encoding.UTF8, "application/json"));
-
         string content = await response.Content.ReadAsStringAsync();
 
         if (!response.IsSuccessStatusCode)
@@ -230,7 +249,7 @@ public class CloudRequest
         if (saveId)
         {
             acc.UserId = content;
-            Account.SaveAccounts();
+            if(saveHashSet) Account.SaveAccounts();
             Console.WriteLine("UserId updated");
         }
     }
@@ -241,15 +260,13 @@ public class CloudRequest
         
         var acc = Account.Accounts.FirstOrDefault(p => p.AccId == accId);
 
-        using HttpClient client = new HttpClient();
-
         if (!LocalFileSystem.paths.ContainsKey(accId))
         {
             Console.WriteLine("Account has no local files");
             return;
         }
 
-        var filePaths = LocalFileSystem.paths[accId].PathsTree.GetFile(LocalFileSystem.PathToArray(fileId));
+        var filePaths = LocalFileSystem.paths[accId].PathsTree.GetFile(LocalFileSystem.PathToArray(fileId, accId), accId);
 
         if (filePaths is null)
         {
@@ -259,7 +276,9 @@ public class CloudRequest
 
         string fileCloudId = (((string, string))filePaths).Item2;
 
-        var response = await client.GetAsync($"http://{acc.CloudIp}/api/Files/{acc.UserId}/{fileCloudId}");
+        Console.WriteLine("Downloading File");
+        var response = await SendRequest(new HttpRequestMessage(HttpMethod.Get, $"http://{acc.CloudIp}/api/Files/{acc.UserId}/{fileCloudId}"));
+        if (response is null) return;
 
         if (!response.IsSuccessStatusCode)
         {
@@ -267,7 +286,9 @@ public class CloudRequest
             return;
         }
         
-        string downloadBuffer = AppDomain.CurrentDomain.BaseDirectory + "..\\..\\..\\downloadBuffer";
+        string downloadBuffer = AppDomain.CurrentDomain.BaseDirectory + "\\downloadBuffer";
+        Directory.CreateDirectory(downloadBuffer);
+        
         byte[] iv = new byte[16];
         Stream stream = await response.Content.ReadAsStreamAsync();
         await stream.ReadAsync(iv, 0, 16);
@@ -300,9 +321,8 @@ public class CloudRequest
             return false;
         }
 
-        using HttpClient client = new HttpClient();
-
-        var response = await client.GetAsync($"http://{acc.CloudIp}/api/Files/{acc.UserId}");
+        var response = await SendRequest(new HttpRequestMessage(HttpMethod.Get, $"http://{acc.CloudIp}/api/Files/{acc.UserId}"));
+        if (response is null) return false;
 
         if (!response.IsSuccessStatusCode)
         {
@@ -333,7 +353,7 @@ public class CloudRequest
             listTuple.Add((valueTuple.Item1, valueTuple.Item2));
         }
 
-        LocalFileSystem.paths[accId] = new LocalFileSystem.Paths(listTuple);
+        LocalFileSystem.paths[accId] = new LocalFileSystem.Paths(listTuple, accId);
 
         Console.WriteLine($"Received {files.Count} Files");
         return true;
@@ -348,9 +368,9 @@ public class CloudRequest
             return;
         }
 
-        using HttpClient client = new HttpClient();
-
-        var response = await client.PostAsync($"http://{acc.CloudIp}/api/Users/{acc.UserId}", null);
+        var response = await SendRequest(
+            new HttpRequestMessage(HttpMethod.Post, $"http://{acc.CloudIp}/api/Users/{acc.UserId}"));
+        if (response is null) return;
 
         string content = await response.Content.ReadAsStringAsync();
         if (!response.IsSuccessStatusCode)
@@ -371,10 +391,56 @@ public class CloudRequest
         var acc = Account.Accounts.FirstOrDefault(p => p.AccId == accId);
         if (acc is null) return;
 
-        using HttpClient client = new HttpClient();
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"http://{acc.CloudIp}/api/Users/{acc.UserId}");
+        request.Headers.Add("key", key);
 
-        var response = await client.DeleteAsync($"http://{acc.CloudIp}/api/Users/{acc.UserId}/{key}");
+        var response = await SendRequest(request);
+        if (response is null) return;
 
         Console.WriteLine($"{response.StatusCode}({response.ReasonPhrase})");
+
+        if (!response.IsSuccessStatusCode) return;
+        LocalFileSystem.paths.Remove(accId);
+    }
+
+    private static async Task<HttpResponseMessage?> SendRequest(HttpRequestMessage message)
+    {
+        try
+        {
+            // Configure a custom certificate validation callback
+            /*ServicePointManager.ServerCertificateValidationCallback =
+                (sender, certificate, chain, sslPolicyErrors) =>
+                {
+                    if (sslPolicyErrors == SslPolicyErrors.None)
+                    {
+                        Console.WriteLine("SSL Certificate has no errors");
+                        return true;
+                    }
+
+                    // Compare the certificate with your custom certificate
+                    if (certificate.Equals(customCertificate))
+                    {
+                        Console.WriteLine("SSL Certificate is own");
+                        return true;
+                    }
+
+                    Console.WriteLine("SSL Certificate is invalid");
+                    return false; // Reject the certificate
+                };*/
+            //ServicePointManager.ServerCertificateValidationCallback += (sender, certificate, chain, sslPolicyErrors) => true;
+
+            using HttpClient client = new HttpClient();
+            return await client.SendAsync(message);
+        }
+        catch (HttpRequestException e)
+        {
+            Console.WriteLine(e);
+        }
+        catch (TaskCanceledException e)
+        {
+            Console.WriteLine(e);
+        }
+
+        return null;
     }
 }
