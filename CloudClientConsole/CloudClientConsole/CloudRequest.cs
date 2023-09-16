@@ -139,7 +139,7 @@ public class CloudRequest
 
         await using (var fs = new FileStream(uploadBuffer + "/encrypted.dat", FileMode.Open))
         {
-            var fileContent = new StreamContent(fs);
+            var fileContent = new StreamContent(new ProgressTrackingStream(fs));
             fileContent.Headers.ContentType = new MediaTypeHeaderValue("multipart/form-data");
             fileContent.Headers.ContentLength = null;
             var formData = new MultipartFormDataContent();
@@ -152,6 +152,7 @@ public class CloudRequest
             request.Headers.Add("key", key);
             request.Headers.Add("path", pathCloud);
             var response = await SendRequest(request);
+            Tools.ClearLastLine();
             if (response is null) return;
 
             if (!response.IsSuccessStatusCode) Console.WriteLine($"{response.StatusCode}({response.ReasonPhrase})");
@@ -180,7 +181,8 @@ public class CloudRequest
         {
             await using (FileStream fsCreate = new FileStream(outputFolderPath + "/encrypted.dat", FileMode.Create))
             {
-                await Cryptography.EncryptStreamAes(fsOpen, key, fsCreate);
+                await Cryptography.EncryptStreamAes(new ProgressTrackingStream(fsOpen), key, fsCreate);
+                Tools.ClearLastLine();
             }
         }
         
