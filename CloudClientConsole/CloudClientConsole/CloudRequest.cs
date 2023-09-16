@@ -432,6 +432,7 @@ public class CloudRequest
             //ServicePointManager.ServerCertificateValidationCallback += (sender, certificate, chain, sslPolicyErrors) => true;
 
             using HttpClient client = new HttpClient();
+            client.Timeout = new TimeSpan(0, 0, 15, 0);
             return await client.SendAsync(message);
         }
         catch (HttpRequestException e)

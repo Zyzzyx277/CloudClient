@@ -1,8 +1,4 @@
-﻿using System.Net;
-using CloudClientConsole;
-using CloudClientConsole.tests;
-
-namespace CloudClientConsole;
+﻿namespace CloudClientConsole;
 class Program
 {
     public static async Task Main(string[] args)
@@ -10,14 +6,6 @@ class Program
         await Start();
         //Console.WriteLine(CryptographyTest.TestAes());
         //Console.WriteLine(await CryptographyTest.TestAesStream());
-        var stream = new ProgressTrackingStream(new FileStream("C:\\Users\\koron\\Downloads\\1gb.bin", FileMode.Open));
-
-        byte[] buffer = new byte[stream.Length];
-        int bytesRead;
-        while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
-        {
-            // Process the data or just keep reading
-        }
     }
 
     public static async Task Start()
