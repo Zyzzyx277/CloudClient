@@ -279,6 +279,7 @@ public class CloudRequest
         string fileCloudId = (((string, string))filePaths).Item2;
 
         Console.WriteLine("Downloading File");
+        
         var response = await SendRequest(new HttpRequestMessage(HttpMethod.Get, $"http://{acc.CloudIp}/api/Files/{acc.UserId}/{fileCloudId}"));
         if (response is null) return;
 
