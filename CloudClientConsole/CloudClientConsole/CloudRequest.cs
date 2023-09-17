@@ -34,7 +34,7 @@ public class CloudRequest
         Console.WriteLine($"{response.StatusCode}({response.ReasonPhrase})");
     }
 
-    public static async Task DeleteFileFromCloud(string accId, string fileId)
+    public static async Task DeleteFileFromCloud(string accId, string path)
     {
         var acc = Account.Accounts.FirstOrDefault(p => p.AccId == accId);
         if (acc is null)
@@ -57,7 +57,13 @@ public class CloudRequest
             return;
         }
 
-        var filePaths = LocalFileSystem.paths[accId].PathsTree.GetFile(LocalFileSystem.PathToArray(fileId, accId), accId);
+        if (!LocalFileSystem.IsValidPath(path))
+        {
+            Console.WriteLine("Path not valid");
+            return;
+        }
+
+        var filePaths = LocalFileSystem.paths[accId].PathsTree.GetFile(LocalFileSystem.PathToArray(path, accId), accId);
 
         if (filePaths is null)
         {
@@ -109,14 +115,20 @@ public class CloudRequest
         Console.WriteLine($"Public Key: {user.PublicKey}");
     }
 
-    public static async Task UploadFile(string accId, string filePath, string pathCloud)
+    public static async Task UploadFile(string accId, string localPath, string pathCloud)
     {
         if (!await GetFilesFromCloud(accId)) return;
+        
+        if (!LocalFileSystem.IsValidPath(pathCloud))
+        {
+            Console.WriteLine("Path not valid");
+            return;
+        }
 
         var acc = Account.Accounts.First(p => p.AccId == accId);
         
         var files = LocalFileSystem.paths[accId].PathsTree.ListAllFiles().ToList();
-        if (files.Any(p => p.Item1 == filePath))
+        if (files.Any(p => p.Item1 == localPath))
         {
             Console.WriteLine("File already existent");
             return;
@@ -124,7 +136,7 @@ public class CloudRequest
 
         string uploadBuffer = AppDomain.CurrentDomain.BaseDirectory + "\\uploadBuffer";
 
-        if(!await ChunkFile(filePath, uploadBuffer, acc.AesKey)) return;
+        if(!await ChunkFile(localPath, uploadBuffer, acc.AesKey)) return;
         
         var existingIds = files.Select(p => p.Item2).ToList();
         string newId;
@@ -265,6 +277,12 @@ public class CloudRequest
         if (!LocalFileSystem.paths.ContainsKey(accId))
         {
             Console.WriteLine("Account has no local files");
+            return;
+        }
+        
+        if (!LocalFileSystem.IsValidPath(path))
+        {
+            Console.WriteLine("Path not valid");
             return;
         }
 

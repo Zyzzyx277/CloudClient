@@ -1,4 +1,6 @@
-﻿namespace CloudClientConsole.TreeStructure;
+﻿using System.Reflection.Metadata.Ecma335;
+
+namespace CloudClientConsole.TreeStructure;
 
 public class Tree
 {
@@ -8,6 +10,12 @@ public class Tree
     {
         return root.GetFile(path, id);
     }
+
+    public bool ContainsPath(List<string> path)
+    {
+        if (!path.Any()) return false;
+        return path is [""] || root.ContainsPath(path.ToList());
+    }
     
     public IEnumerable<(string, string)> ListAllFiles()
     {
@@ -16,7 +24,7 @@ public class Tree
 
     public Node GetDirectory(List<string> path)
     {
-        return root.GetDirectory(path);
+        return root.GetDirectory(path.ToList());
     }
 
     public void AddDirectory(List<string> path)
@@ -48,8 +56,19 @@ public class Tree
         return root.ContainsFile(name);
     }
     
+    public bool ContainsFile(List<string> path)
+    {
+        return path.Count > 1 && root.ContainsFile(path.ToList());
+    }
+    
     public bool ContainsDirectory(string name)
     {
         return root.ContainsDirectory(name);
+    }
+    
+    public bool ContainsDirectory(List<string> path)
+    {
+        if (!path.Any()) return false;
+        return path is [""] || root.ContainsDirectory(path.ToList());
     }
 }

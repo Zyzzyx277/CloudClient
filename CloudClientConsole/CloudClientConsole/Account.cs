@@ -59,11 +59,11 @@ public class Account
         }
         foreach (var file in files)
         {
-            Console.WriteLine($"Found File {file}. Is this the right one (y/n):");
+            Console.Write($"Found File {file}. Is this the right one (y/n):\n\r> ");
             var input = Console.ReadLine();
             if (input.ToLower() == "n") continue;
 
-            Console.WriteLine("Do you want to load it (y/n):");
+            Console.Write("Do you want to load it (y/n):\n\r> ");
 
             input = Console.ReadLine();
             if (input.ToLower() == "n") return true;

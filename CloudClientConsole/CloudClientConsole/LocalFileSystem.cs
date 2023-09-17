@@ -20,8 +20,22 @@ public class LocalFileSystem
             Console.WriteLine("Account has no local Files");
             return;
         }
-        
-        paths[accId].CurrentPath = paths[accId].PathsTree.GetDirectory(PathToArray(path, accId));
+
+        if (!IsValidPath(path))
+        {
+            Console.WriteLine("Path not valid");
+            return;
+        }
+
+        var pathsObject = paths[accId];
+        var pathList = PathToArray(path, accId);
+        if (!pathsObject.PathsTree.ContainsDirectory(pathList))
+        {
+            Console.WriteLine("Path not in local Filesystem");
+            return;
+        }
+            
+        pathsObject.CurrentPath = pathsObject.PathsTree.GetDirectory(pathList);
         Console.WriteLine($"CurrentPath: {paths[accId].CurrentPath.GetPathString()}");
     }
     
@@ -89,9 +103,9 @@ public class LocalFileSystem
 
     public static List<string> PathToArray(string path, string? id)
     {
-        var pathList = new List<string>();
-        pathList.Add("");
-        if (path[0] == '/') path.Remove(1);
+        var pathList = new List<string> { "" };
+
+        if (path == "/") return pathList;
         
         foreach (var c in path)
         {
@@ -107,7 +121,7 @@ public class LocalFileSystem
         return pathList;
     }
 
-    public static List<string> ManageDots(List<string> path, string id)
+    private static List<string> ManageDots(List<string> path, string id)
     {
         if (path.Count < 1) return path;
         
@@ -126,6 +140,7 @@ public class LocalFileSystem
         for (int i = 1; i < path.Count; i++)
         {
             if (path[i] != "..") continue;
+            if (path.Count < 3) return new List<string> { "" };
             path.RemoveAt(i);
             path.RemoveAt(i - 1);
             i -= 2;
@@ -133,5 +148,18 @@ public class LocalFileSystem
 
         
         return path;
+    }
+
+    public static bool IsValidPath(string path)
+    {
+        if(path == "/") return true;
+        if (path.Length < 2) return false;
+        if (path[0] != '/' && path[0] != '.') return false;
+        for (int i = 1; i < path.Length; i++)
+        {
+            if (path[i] == '/' && path[i - 1] == '/') return false;
+        }
+
+        return path[^1] != '/';
     }
 }

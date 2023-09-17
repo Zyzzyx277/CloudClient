@@ -115,6 +115,20 @@ public class Node
     {
         return Parent is null ? $"{Name}/{path}" : Parent.GetPathString($"{Name}/{path}");
     }
+
+    public bool ContainsPath(List<string> path)
+    {
+        if(path.Count == 2)
+        {
+            return files.Any(p => p.Item1 == path[1]) || directories.Any(p => p.Name == path[1]);
+        }
+
+        var directory = directories.FirstOrDefault(p => p.Name == path[1]);
+
+        if (directory is null) return false;
+        path.RemoveAt(0);
+        return directory.ContainsPath(path);
+    }
     
     public Stack<string> GetPath(Stack<string> path)
     {
@@ -146,5 +160,25 @@ public class Node
         if (!file.Any()) return null;
         
         return file.First();
+    }
+    
+    public bool ContainsDirectory(List<string> path)
+    {
+        if (path.Count == 2) return directories.Any(p => p.Name == path[1]);
+        
+        path.RemoveAt(0);
+
+        var directory = directories.FirstOrDefault(p => p.Name == path[0]);
+        return directory is not null && directory.ContainsDirectory(path);
+    }
+
+    public bool ContainsFile(List<string> path)
+    {
+        if (path.Count == 2) return files.Any(p => p.Item1 == path[1]);
+        
+        path.RemoveAt(0);
+        
+        var directory = directories.FirstOrDefault(p => p.Name == path[0]);
+        return directory is not null && directory.ContainsFile(path);
     }
 }
