@@ -1,10 +1,8 @@
 ﻿using System.IO.Compression;
-using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using Microsoft.VisualBasic.FileIO;
 using Newtonsoft.Json;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
@@ -13,8 +11,8 @@ namespace CloudClientConsole;
 public class CloudRequest
 {
     private static string? key;
-    private static X509Certificate2 customCertificate = new X509Certificate2(
-        AppDomain.CurrentDomain.BaseDirectory + "..\\..\\..\\Certificates\\server.crt");
+    private static X509Certificate2 customCertificate = new (
+        AppDomain.CurrentDomain.BaseDirectory + "\\Certificates\\server.crt");
 
     public static async Task DeleteAll(string accId, string key)
     {
