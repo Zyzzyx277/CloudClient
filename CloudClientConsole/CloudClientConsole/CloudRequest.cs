@@ -13,8 +13,8 @@ namespace CloudClientConsole;
 public class CloudRequest
 {
     private static string? key;
-    //private static X509Certificate2 customCertificate = new X509Certificate2(
-        //AppDomain.CurrentDomain.BaseDirectory + "\\Certificates\\server.crt");
+    private static X509Certificate2 customCertificate = new X509Certificate2(
+        AppDomain.CurrentDomain.BaseDirectory + "..\\..\\..\\Certificates\\server.crt");
 
     public static async Task DeleteAll(string accId, string key)
     {
@@ -25,7 +25,7 @@ public class CloudRequest
             return;
         }
 
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"http://{acc.CloudIp}/api/admin");
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"https://{acc.CloudIp}/api/admin");
         request.Headers.Add("key", key);
 
         var response = await SendRequest(request);
@@ -73,7 +73,7 @@ public class CloudRequest
 
         var fileIdEncrypted = filePaths.FileId;
 
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"http://{acc.CloudIp}/api/Files/{acc.UserId}/{fileIdEncrypted}");
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"https://{acc.CloudIp}/api/Files/{acc.UserId}/{fileIdEncrypted}");
         request.Headers.Add("key", key);
         var response = await SendRequest(request);
         if (response is null) return;
@@ -92,7 +92,7 @@ public class CloudRequest
             return;
         }
 
-        var response = await SendRequest(new HttpRequestMessage(HttpMethod.Get, $"http://{acc.CloudIp}/api/Users/{acc.UserId}"));
+        var response = await SendRequest(new HttpRequestMessage(HttpMethod.Get, $"https://{acc.CloudIp}/api/Users/{acc.UserId}"));
         if (response is null) return;
 
         var content = await response.Content.ReadAsStringAsync();
@@ -147,7 +147,7 @@ public class CloudRequest
 
         pathCloud = Convert.ToBase64String(Cryptography.EncryptAes(Encoding.UTF8.GetBytes(pathCloud), acc.AesKey));
         
-        string uri = $"http://{acc.CloudIp}/api/Files/{acc.UserId}/{newId}";
+        string uri = $"https://{acc.CloudIp}/api/Files/{acc.UserId}/{newId}";
 
         await using (var fs = new FileStream(uploadBuffer + "/encrypted.dat", FileMode.Open))
         {
@@ -250,7 +250,7 @@ public class CloudRequest
             return;
         }
 
-        var response = await SendRequest(new HttpRequestMessage(HttpMethod.Get, $"http://{acc.CloudIp}/api/Users"));
+        var response = await SendRequest(new HttpRequestMessage(HttpMethod.Get, $"https://{acc.CloudIp}/api/Users"));
         if (response is null) return;
 
         var content = await response.Content.ReadAsStringAsync();
@@ -283,7 +283,7 @@ public class CloudRequest
             return;
         }
 
-        var request = new HttpRequestMessage(HttpMethod.Put, $"http://{acc.CloudIp}/api/Users");
+        var request = new HttpRequestMessage(HttpMethod.Put, $"https://{acc.CloudIp}/api/Users");
         request.Content = new StringContent(JsonConvert.SerializeObject(acc.PublicKey), Encoding.UTF8, "application/json");
 
         var response = await SendRequest(request);
@@ -337,7 +337,7 @@ public class CloudRequest
 
         Console.WriteLine("Downloading File");
         
-        var response = await SendRequest(new HttpRequestMessage(HttpMethod.Get, $"http://{acc.CloudIp}/api/Files/{acc.UserId}/{fileCloudId}"));
+        var response = await SendRequest(new HttpRequestMessage(HttpMethod.Get, $"https://{acc.CloudIp}/api/Files/{acc.UserId}/{fileCloudId}"));
         if (response is null) return;
 
         if (!response.IsSuccessStatusCode)
@@ -408,7 +408,7 @@ public class CloudRequest
             return false;
         }
 
-        var response = await SendRequest(new HttpRequestMessage(HttpMethod.Get, $"http://{acc.CloudIp}/api/Files/{acc.UserId}"));
+        var response = await SendRequest(new HttpRequestMessage(HttpMethod.Get, $"https://{acc.CloudIp}/api/Files/{acc.UserId}"));
         if (response is null) return false;
 
         if (!response.IsSuccessStatusCode)
@@ -454,7 +454,7 @@ public class CloudRequest
         }
 
         var response = await SendRequest(
-            new HttpRequestMessage(HttpMethod.Post, $"http://{acc.CloudIp}/api/Users/{acc.UserId}"));
+            new HttpRequestMessage(HttpMethod.Post, $"https://{acc.CloudIp}/api/Users/{acc.UserId}"));
         if (response is null) return;
         
         if (!response.IsSuccessStatusCode)
@@ -478,7 +478,7 @@ public class CloudRequest
         var acc = Account.Accounts.FirstOrDefault(p => p.AccId == accId);
         if (acc is null) return;
 
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"http://{acc.CloudIp}/api/Users/{acc.UserId}");
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"https://{acc.CloudIp}/api/Users/{acc.UserId}");
         request.Headers.Add("key", key);
 
         var response = await SendRequest(request);
@@ -494,8 +494,8 @@ public class CloudRequest
     {
         try
         {
-            // Configure a custom certificate validation callback
-            /*ServicePointManager.ServerCertificateValidationCallback =
+            var handler = new HttpClientHandler();
+            handler.ServerCertificateCustomValidationCallback =
                 (sender, certificate, chain, sslPolicyErrors) =>
                 {
                     if (sslPolicyErrors == SslPolicyErrors.None)
@@ -507,16 +507,15 @@ public class CloudRequest
                     // Compare the certificate with your custom certificate
                     if (certificate.Equals(customCertificate))
                     {
-                        Console.WriteLine("SSL Certificate is own");
+                        Console.WriteLine("SSL Certificate is valid");
                         return true;
                     }
 
                     Console.WriteLine("SSL Certificate is invalid");
                     return false; // Reject the certificate
-                };*/
-            //ServicePointManager.ServerCertificateValidationCallback += (sender, certificate, chain, sslPolicyErrors) => true;
-
-            using HttpClient client = new HttpClient();
+                };
+            
+            using HttpClient client = new HttpClient(handler);
             client.Timeout = new TimeSpan(0, 0, 15, 0);
             return await client.SendAsync(message);
         }
