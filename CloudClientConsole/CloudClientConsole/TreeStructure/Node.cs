@@ -4,7 +4,7 @@ public class Node
 {
     public string Name { get; private set; }
     public Node? Parent { get; private set; }
-    private HashSet<(string, string)> files = new ();
+    private HashSet<ConfigClient> files = new ();
     private HashSet<Node> directories = new();
 
     public Node(string name, Node? parent)
@@ -13,7 +13,7 @@ public class Node
         Parent = parent;
     }
 
-    public IEnumerable<(string, string)> ListAllFiles(IEnumerable<(string, string)> list)
+    public IEnumerable<ConfigClient> ListAllFiles(IEnumerable<ConfigClient> list)
     {
         list = list.Concat(files);
         foreach (var directory in directories)
@@ -24,7 +24,7 @@ public class Node
         return list;
     }
 
-    public IEnumerable<(string, string)> ListFiles()
+    public IEnumerable<ConfigClient> ListFiles()
     {
         return files;
     }
@@ -64,7 +64,7 @@ public class Node
         directory.AddDirectory(path);
     }
     
-    public void AddFile(List<string> path, (string, string) file)
+    public void AddFile(List<string> path, ConfigClient file)
     {
         if (path.Count == 1)
         {
@@ -83,7 +83,7 @@ public class Node
         directory.AddFile(path, file);
     }
 
-    public HashSet<(string, string)> GetFiles(List<string> path)
+    public HashSet<ConfigClient> GetFiles(List<string> path)
     {
         if (!path.Any()) return files;
 
@@ -107,7 +107,7 @@ public class Node
     
     public bool ContainsFile(string name)
     {
-        return files.Any(p => p.Item1 == name) || 
+        return files.Any(p => p.Path == name) || 
                directories.Any(directory => directory.ContainsFile(name));
     }
 
@@ -120,7 +120,7 @@ public class Node
     {
         if(path.Count == 2)
         {
-            return files.Any(p => p.Item1 == path[1]) || directories.Any(p => p.Name == path[1]);
+            return files.Any(p => p.Path == path[1]) || directories.Any(p => p.Name == path[1]);
         }
 
         var directory = directories.FirstOrDefault(p => p.Name == path[1]);
@@ -143,7 +143,7 @@ public class Node
                directories.Any(directory => directory.ContainsDirectory(name));
     }
 
-    public (string, string)? GetFile(List<string> path, string id)
+    public ConfigClient? GetFile(List<string> path, string id)
     {
         path.RemoveAt(0);
         if (path.Count > 1)
@@ -156,7 +156,7 @@ public class Node
             return null;
         }
         
-        var file = files.Where(p => LocalFileSystem.PathToArray(p.Item1, id)[^1] == path[^1]);
+        var file = files.Where(p => LocalFileSystem.PathToArray(p.Path, id)[^1] == path[^1]);
         if (!file.Any()) return null;
         
         return file.First();
@@ -174,7 +174,7 @@ public class Node
 
     public bool ContainsFile(List<string> path)
     {
-        if (path.Count == 2) return files.Any(p => p.Item1 == path[1]);
+        if (path.Count == 2) return files.Any(p => p.Path == path[1]);
         
         path.RemoveAt(0);
         

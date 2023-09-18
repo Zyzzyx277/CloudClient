@@ -6,7 +6,7 @@ public class Tree
 {
     private Node root = new Node("", null);
 
-    public (string, string)? GetFile(List<string> path, string id)
+    public ConfigClient? GetFile(List<string> path, string id)
     {
         return root.GetFile(path, id);
     }
@@ -17,9 +17,9 @@ public class Tree
         return path is [""] || root.ContainsPath(path.ToList());
     }
     
-    public IEnumerable<(string, string)> ListAllFiles()
+    public IEnumerable<ConfigClient> ListAllFiles()
     {
-        return root.ListAllFiles(Enumerable.Empty<(string, string)>());
+        return root.ListAllFiles(Enumerable.Empty<ConfigClient>());
     }
 
     public Node GetDirectory(List<string> path)
@@ -33,13 +33,13 @@ public class Tree
         root.AddDirectory(path);
     }
     
-    public void AddFile(List<string> path, (string, string) file)
+    public void AddFile(List<string> path, ConfigClient file)
     {
         path.RemoveAt(0);
         root.AddFile(path, file);
     }
 
-    public HashSet<(string, string)> GetFiles(List<string> path)
+    public HashSet<ConfigClient> GetFiles(List<string> path)
     {
         path.RemoveAt(0);
         return root.GetFiles(path);

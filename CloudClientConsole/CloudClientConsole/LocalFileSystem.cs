@@ -68,7 +68,7 @@ public class LocalFileSystem
         {
             foreach (var file in paths[accId].PathsTree.ListAllFiles())
             {
-                Console.Write(file.Item1 + "   ");
+                Console.Write(file.Path + "   ");
             }
             Console.WriteLine("");
             return;
@@ -76,7 +76,7 @@ public class LocalFileSystem
         
         foreach (var file in paths[accId].CurrentPath.ListFiles())
         {
-            Console.Write(new FileInfo(file.Item1).Name + "   ");
+            Console.Write(new FileInfo(file.Path).Name + "   ");
         }
         
         foreach (var directory in paths[accId].CurrentPath.ListDirectories())
@@ -91,11 +91,11 @@ public class LocalFileSystem
         public readonly Tree PathsTree = new Tree();
         public Node CurrentPath {get;set;}
 
-        public Paths(IEnumerable<(string, string)> paths, string id)
+        public Paths(IEnumerable<ConfigClient> paths, string id)
         {
             foreach (var path in paths)
             {
-                PathsTree.AddFile(PathToArray(path.Item1, id), path);
+                PathsTree.AddFile(PathToArray(path.Path, id), path);
             }
             CurrentPath = PathsTree.GetDirectory(new List<string>{""});
         }

@@ -189,12 +189,14 @@ public class CommandManager
                     Console.WriteLine("Not enough Arguments");
                     return;
                 }
+                bool compress = args.Contains("-c");
+                args.Remove("-c");
                 if (args.Contains("-t"))
                 {
                     args.Remove("-t");
                     await CloudRequest.RequestAuth(args[0]);
                 }
-                await CloudRequest.UploadFile(args[0], args[1], args[2]);
+                await CloudRequest.UploadFile(args[0], args[1], args[2], compress);
                 break;
             case "get":
                 if (args.Count < 3)
